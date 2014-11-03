@@ -3,12 +3,12 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.unina.comics</groupId>
+    <groupId>it.unina.comics</groupId>
     <artifactId>pdp-platino</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
     <name>pdp-platino</name>
-
+    
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -26,20 +26,27 @@
             <groupId>org.glassfish.jersey.containers</groupId>
             <artifactId>jersey-container-grizzly2-http</artifactId>
         </dependency>
-        <!-- uncomment this to get JSON support:
          <dependency>
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-moxy</artifactId>
         </dependency>
-        -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.9</version>
             <scope>test</scope>
         </dependency>
+	<!--    <dependency>
+         <groupId>netconf-java</groupId>
+         <artifactId>netconf-java</artifactId>
+         <scope>system</scope>
+         <version>1.0</version>
+	 <systemPath>${basedir}/lib/netconf-java/src</systemPath>
+       </dependency>-->
     </dependencies>
 
+
+    
     <build>
         <plugins>
             <plugin>
@@ -50,6 +57,9 @@
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
+   		    <additionalClasspathElements>
+		      <additionalClasspathElement>${basedir}/lib/netconf-java/src/</additionalClasspathElement>
+		    </additionalClasspathElements>
                 </configuration>
             </plugin>
             <plugin>
@@ -64,8 +74,10 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.unina.comics.platino.Main</mainClass>
-                </configuration>
+                    <mainClass>it.unina.comics.platino.Main</mainClass>
+   		    <additionalClasspathElements>
+		      <additionalClasspathElement>${basedir}/lib/netconf-java/src/</additionalClasspathElement>
+		    </additionalClasspathElements>                </configuration>
             </plugin>
         </plugins>
     </build>
