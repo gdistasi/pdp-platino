@@ -6,6 +6,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.DefaultValue;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
 
 // netconf related imports
@@ -17,13 +23,66 @@ import net.juniper.netconf.XML;
 import org.xml.sax.SAXException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.lang.String; 
 
 /**
  * Root resource (exposed at "ReserveBandwidth" path)
  */
 @Path("ReserveBandwidth")
-public class ReserveBandwidth {
+public class ReserveBandwidth  {
+
+	private class Router {
+
+		String  _ip;
+		String  _interface;
+		Integer _bandwitdh;
+
+		public Router(String myIp, String myInterface, Integer myBand) {
+			this._ip = myIp;
+			this._interface = myInterface;
+			this._bandwitdh = myBand;
+		}
+
+		public String getMyIP() 	{ return this._ip; 		}
+		public String getMyInterface() 	{ return this._interface; 	}
+		public Integer getMybandwitdh() { return this._bandwitdh; 	}
+	}
+	
+	private ArrayList<Router> myRouters = new ArrayList<>();	
+
+	private ArrayList<Router> getPath ( boolean serviceAvailable,
+					    String ip, 
+					    String srcIP, 
+					    String dstIP, 
+					    String SrcPort, 
+					    String DstPort, 
+					    String Bandwidth ) {
+		String responseMsg;
+		String URI="http://" + ip + "/NM/";
+				
+		//quale IP devo mettere?		
+		if ( serviceAvailable ) {
+			Client c = ClientBuilder.newClient();			
+			WebTarget target = c.target(URI);			
+			responseMsg = target.path("?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP +"").request().get(String.class);
+		
+		} else {
+			responseMsg = "{0,\"hops\": [{1,\"IP\":\"localhost\",2}]}";
+		}
+	
+		Object obj=JSONValue.parse(responseMsg);
+		JSONObject jobj=(JSONObject)obj;
+		JSONArray array=(JSONArray)jobj.get("hops");
+		int len=array.size();
+
+		for (int i=0; i<len;i++){
+			String routerIP=((JSONObject)array.get(i)).get("IP").toString();
+			myRouters.add( new Router(routerIP, routerIP, 10000));
+		}			
+	
+		
+		return myRouters;
+	}
 
     /**
      * Method handling HTTP GET requests. The returned object will be sent
@@ -32,49 +91,112 @@ public class ReserveBandwidth {
      * @return String that will be returned as a text/plain response.
      */
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    //@Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     public String getIt(
-      @DefaultValue("") @QueryParam("srcIp") String srcIp,
-      @DefaultValue("") @QueryParam("dstIp") String dstIp,
-      @DefaultValue("") @QueryParam("srcPort") String srcPort,
-      @DefaultValue("") @QueryParam("dstPort") String dstPort,
-      @DefaultValue("") @QueryParam("protocol") String protocol,
-      @DefaultValue("") @QueryParam("bandwidth") String bandwidth){
-      
-           
-      try {
-	// ottieni qua percorco...
+      @DefaultValue("") @QueryParam("srcip") String srcIp,
+      @DefaultValue("") @QueryParam("dstip") String dstIp,
+      @DefaultValue("") @QueryParam("srcport") String srcPort,
+      @DefaultValue("") @QueryParam("dstport") String dstPort,
+      @DefaultValue("TCP") @QueryParam("protocol") String protocol,
+      @DefaultValue("") @QueryParam("bandwidth") String bandwidth)
+      {      
+	String user= "gennaro";
+	String password= "gennaro";	
+	boolean error=false;	
+	String errMsg= " ";	
+	boolean serviceAvailable=false;
+	//NetconfAdapter netconf = new NetconfAdapter();	
+	String routerIP="invalid";
+	String NMIP="x.x.x.x";
+	System.err.println("Serving request...");
+	return "ok";
 
-	// poi fai un ciclo che, per ogni router, esegue le istruzioni seguenti... ovviamente la configurazione va preparata per ogni router in maniera specifica.
-      
-	String configuration = "<shaper xmlns=\"http://www.comics.unina.it/nc/shaper\">"+
-							   "<qdisc><interface>eth0</interface>"+
-							   "<bandwidth>10000</bandwidth><class><id>11</id><rate>3000</rate><ceil>10000</ceil><filter><id>16</id><protocol>0</protocol><sourcePort>1040</sourcePort><destinationPort>2000</destinationPort></filter></class>"+
-							   "</qdisc></shaper>";	
-      
-	NetconfAdapter router = new NetconfAdapter();
+	try 
+	{	
+		myRouters = getPath(serviceAvailable, NMIP, srcIp, dstIp, srcPort, dstPort, bandwidth);
+		
+		for ( int i = 0; i < myRouters.size(); i++ )
+			{
 
-	router.ConfigureRouter("127.0.0.1", "gennaro", "gennaro", configuration);
-	 
-	
-	// alla fine restituisci il risultato in formato JSON specificando se tutto è ok o se ci sono stati problemi.
-	return "Reserving: " + srcIp + " " + dstIp + " " + srcPort + " " + dstPort + " " + protocol + " " + bandwidth + "\n";
+			int proto;
+			if (protocol.toUpperCase()=="TCP")
+				proto=6;
+			else if (protocol.toUpperCase()=="UDP")
+				proto=17;
+			else if (protocol.toUpperCase()=="ICMP")
+				proto=1;
+			else {
+				return "Err: Wrong protocol specification";	
+			}			
 
-      } catch (NetconfException e){
-	//TODO gestire errori
-	System.err.println(e);
-      } catch (ParserConfigurationException e){
-	System.err.println(e);
-      } catch (SAXException e){
-	System.err.println(e);
-      } catch (IOException e){
-	System.err.println(e);
-      } catch (InterruptedException e){
-	System.err.println(e);
-      } finally  {
-	return "Error";
+			Router x = myRouters.get(i);
+			routerIP = x.getMyIP();
+
+			String configuration =
+				"<shaper xmlns=\"http://www.comics.unina.it/nc/shaper\">"+
+					"<qdisc>" +
+						"<interface>" + x.getMyIP() + "</interface>"+
+						"<bandwidth>" + x.getMybandwitdh() + "</bandwidth>" +
+						"<class>"+
+							"<id>11</id>"+
+							"<rate>" + bandwidth + "</rate>"+
+							"<ceil>" + x.getMybandwitdh() + "</ceil>"+
+							"<filter>"+
+								"<id>16</id>"+
+								"<protocol>" + proto + "</protocol>"+
+								"<sourcePort>" + srcPort + "</sourcePort>"+
+								"<destinationPort>" + dstPort + "</destinationPort>"+
+								"<source>" + srcIp +  "</source>" +
+								"<destination>" + dstIp + "</destination>" +
+							"</filter>"+
+						"</class>"+
+					"</qdisc>"+
+				"</shaper>";	
+
+			//NetconfAdapter router = new NetconfAdapter();
+
+			netconf.ConfigureRouter(x.getMyIP(), user, password, configuration);
+		        netconf.CloseConnection();
+
+			}
+		} catch (NetconfException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(e);      
+			} 
+		catch (ParserConfigurationException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(e);      			
+			} 
+		catch (SAXException e)	
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(e);
+			} 
+		catch (IOException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
+			System.err.println(e);
+		      	}
+ 		catch (InterruptedException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
+			System.err.println(e);
+		      	}
+		finally {
+			netconf.CloseConnection();
+		}
+
+	if ( error == false )
+		{errMsg = "ok";}
+	//errMsg += "\n\n";
+	return errMsg;
       }
-      
-	
-    }
 }

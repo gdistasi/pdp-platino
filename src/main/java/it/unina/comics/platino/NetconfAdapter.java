@@ -11,14 +11,21 @@ import java.util.List;
 
 
 public class NetconfAdapter {
-		
+	
+	private Device device;
+	
+	public void CloseConnection(){
+		device.close();
+        }	
+
 	public void ConfigureRouter(String routerAddress, String user, String password, String configuration) throws NetconfException, 
 				    ParserConfigurationException, SAXException, IOException, InterruptedException {
 		//Create the device object and establish a NETCONF session
-		Device device = new Device(routerAddress, user, password, null, 22, getDefaultCapabilities());
+		device = new Device(routerAddress, user, password, null, 22, getDefaultCapabilities());
 		device.connect();
 		device.loadXMLConfiguration(configuration, "replace");
-		device.close();
+		//device.close();
+		//CloseConnection();	
 	}
 	
 	public static ArrayList<String> getDefaultCapabilities(){
