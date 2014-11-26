@@ -12,6 +12,8 @@ import javax.ws.rs.client.WebTarget;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.json.simple.parser.ParseException;
+import org.json.simple.parser.JSONParser;
 
 
 // netconf related imports
@@ -56,27 +58,36 @@ public class ReserveBandwidth  {
 					    String dstIP, 
 					    String SrcPort, 
 					    String DstPort, 
-					    String Bandwidth ) {
+					    String Bandwidth ) throws ParseException {
 		String responseMsg;
 		String URI="http://" + ip + "/NM/";
-				
-		//quale IP devo mettere?		
+	
+	
 		if ( serviceAvailable ) {
 			Client c = ClientBuilder.newClient();			
 			WebTarget target = c.target(URI);			
 			responseMsg = target.path("?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP +"").request().get(String.class);
 		
 		} else {
-			responseMsg = "{0,\"hops\": [{1,\"IP\":\"localhost\",2}]}";
+			responseMsg = "{\"timestamp\": 0,\"hops\": [ {\"hop\": 1,\"ip\":\"localhost\",\"rtt\": 2} ]}";
 		}
 	
-		Object obj=JSONValue.parse(responseMsg);
+		System.err.println("Response from NM: ");
+		System.err.println(responseMsg);
+		
+		JSONParser parser=new JSONParser();
+	
+		Object obj=parser.parse(responseMsg);
 		JSONObject jobj=(JSONObject)obj;
 		JSONArray array=(JSONArray)jobj.get("hops");
 		int len=array.size();
 
+		System.err.println("Path is made of " + len + " hop(s).");
+		
+		System.err.println("Hops: ");
 		for (int i=0; i<len;i++){
-			String routerIP=((JSONObject)array.get(i)).get("IP").toString();
+			String routerIP=((JSONObject)array.get(i)).get("ip").toString();
+			System.err.println(routerIP);
 			myRouters.add( new Router(routerIP, routerIP, 10000));
 		}			
 	
@@ -91,8 +102,8 @@ public class ReserveBandwidth  {
      * @return String that will be returned as a text/plain response.
      */
     @GET
-    //@Produces(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.APPLICATION_JSON)
+    //@Produces(MediaType.TEXT_PLAIN)
     public String getIt(
       @DefaultValue("") @QueryParam("srcip") String srcIp,
       @DefaultValue("") @QueryParam("dstip") String dstIp,
@@ -102,38 +113,44 @@ public class ReserveBandwidth  {
       @DefaultValue("") @QueryParam("bandwidth") String bandwidth)
       {      
 	String user= "gennaro";
-	String password= "gennaro";	
+	String password= "1234554321";	
 	boolean error=false;	
 	String errMsg= " ";	
 	boolean serviceAvailable=false;
-	//NetconfAdapter netconf = new NetconfAdapter();	
+	NetconfAdapter netconf = new NetconfAdapter();	
 	String routerIP="invalid";
 	String NMIP="x.x.x.x";
 	System.err.println("Serving request...");
-	return "ok";
 
 	try 
 	{	
 		myRouters = getPath(serviceAvailable, NMIP, srcIp, dstIp, srcPort, dstPort, bandwidth);
 		
+		
 		for ( int i = 0; i < myRouters.size(); i++ )
 			{
-
-			int proto;
-			if (protocol.toUpperCase()=="TCP")
+			
+			int proto=-1;
+			if (protocol.toUpperCase().equals("TCP"))
 				proto=6;
-			else if (protocol.toUpperCase()=="UDP")
+			else if (protocol.toUpperCase().equals("UDP"))
 				proto=17;
-			else if (protocol.toUpperCase()=="ICMP")
+			else if (protocol.toUpperCase().equals("ICMP"))
 				proto=1;
 			else {
-				return "Err: Wrong protocol specification";	
+				errMsg="Err: Wrong protocol specification";
+				error=true;
+				System.err.println(errMsg);
+				break;
 			}			
 
-			Router x = myRouters.get(i);
-			routerIP = x.getMyIP();
+			
+			if (proto!=-1){
+			
+			  Router x = myRouters.get(i);
+			  routerIP = x.getMyIP();
 
-			String configuration =
+			  String configuration =
 				"<shaper xmlns=\"http://www.comics.unina.it/nc/shaper\">"+
 					"<qdisc>" +
 						"<interface>" + x.getMyIP() + "</interface>"+
@@ -144,59 +161,71 @@ public class ReserveBandwidth  {
 							"<ceil>" + x.getMybandwitdh() + "</ceil>"+
 							"<filter>"+
 								"<id>16</id>"+
-								"<protocol>" + proto + "</protocol>"+
-								"<sourcePort>" + srcPort + "</sourcePort>"+
-								"<destinationPort>" + dstPort + "</destinationPort>"+
-								"<source>" + srcIp +  "</source>" +
-								"<destination>" + dstIp + "</destination>" +
-							"</filter>"+
-						"</class>"+
-					"</qdisc>"+
-				"</shaper>";	
+								"<protocol>" + proto + "</protocol>";
+								
+			   if (!srcPort.equals("")){
+			      configuration = configuration + "<sourcePort>" + srcPort + "</sourcePort>";				
+			   }
+			   if (!dstPort.equals("")){
+			      configuration = configuration + "<destinationPort>" + dstPort + "</destinationPort>";
+			   }
+			   if (!srcIp.equals("")){
+			      configuration = configuration + "<source>" + srcIp +  "</source>";
+			   }
+			   if (!dstIp.equals("")){
+			      configuration = configuration + "<destination>" + dstIp + "</destination>";
+			   }
+			   
+			   configuration = configuration + "</filter></class></qdisc></shaper>";	
 
-			//NetconfAdapter router = new NetconfAdapter();
-
-			netconf.ConfigureRouter(x.getMyIP(), user, password, configuration);
-		        netconf.CloseConnection();
+			   netconf.ConfigureRouter(x.getMyIP(), user, password, configuration);
+			   netconf.CloseConnection();
 
 			}
-		} catch (NetconfException e)
-			{
-			error=true;
-			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(e);      
-			} 
-		catch (ParserConfigurationException e)
-			{
-			error=true;
-			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(e);      			
-			} 
-		catch (SAXException e)	
-			{
-			error=true;
-			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(e);
-			} 
-		catch (IOException e)
-			{
-			error=true;
-			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
-			System.err.println(e);
-		      	}
- 		catch (InterruptedException e)
-			{
-			error=true;
-			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
-			System.err.println(e);
-		      	}
-		finally {
-			netconf.CloseConnection();
 		}
+	} catch (NetconfException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(errMsg);
+			} 
+	catch (ParserConfigurationException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(errMsg);
+			} 
+	catch (SAXException e)	
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
+			System.err.println(errMsg);
+			} 
+	catch (IOException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
+			System.err.println(errMsg);
+		      	}
+ 	catch (InterruptedException e)
+			{
+			error=true;
+			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
+			System.err.println(errMsg);
+		      	}
+	catch (ParseException e){
+			error=true;
+			errMsg="Error in getting the path from NM: " + e.getMessage();
+			System.err.println(errMsg);
+	} finally {
+	      try {
+			netconf.CloseConnection();
+	      } catch (Exception e){}	
+	}
 
 	if ( error == false )
 		{errMsg = "ok";}
-	//errMsg += "\n\n";
+
 	return errMsg;
       }
 }
