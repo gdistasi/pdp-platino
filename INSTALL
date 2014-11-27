@@ -1,0 +1,4 @@
+
+# Install json (a dependency of the project) by putting json-simple-1.1.1.jar in the current
+directory and running:
+mvn install:install-file -Dfile=json-simple-1.1.1.jar -DgroupId=org.json.simple -DartifactId=json-simple -Dversion=1.1.1 -Dpackaging=jar

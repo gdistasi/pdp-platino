@@ -9,6 +9,9 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.net.ConnectException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -32,6 +35,15 @@ import java.lang.String;
  */
 @Path("ReserveBandwidth")
 public class ReserveBandwidth  {
+
+	public ReserveBandwidth(){
+	    try {
+	      loadPdPConfig();
+	    } catch (IOException e){
+		System.err.println(e);
+		System.exit(1);
+	    }
+	}
 
 	private class Router {
 
@@ -58,9 +70,9 @@ public class ReserveBandwidth  {
 					    String dstIP, 
 					    String SrcPort, 
 					    String DstPort, 
-					    String Bandwidth ) throws ParseException {
+					    String Bandwidth ) throws ParseException,ConnectException {
 		String responseMsg;
-		String URI="http://" + ip + "/NM/";
+		String URI="http://" + nm_ip + "/NM/";
 	
 	
 		if ( serviceAvailable ) {
@@ -95,6 +107,33 @@ public class ReserveBandwidth  {
 		return myRouters;
 	}
 
+	
+    private void loadPdPConfig() throws IOException {
+	BufferedReader reader = new BufferedReader(new FileReader("/etc/pdp.conf"));
+	String line;
+	
+	nm_ip="";
+	pep_user="";
+	pep_password="";
+	
+	while ((line = reader.readLine()) != null){
+	    String[] result = line.split("=");
+	    if (result[0].trim().toUpperCase().equals("NM_IP")){
+	      nm_ip=result[1].trim();
+	    } else if (result[0].trim().toUpperCase().equals("PEP_USER")){
+	      pep_user=result[1].trim();
+	    } else if (result[0].trim().toUpperCase().equals("PEP_PASSWORD")){
+	      pep_password=result[1].trim();
+	    } else if (result[0].trim().length()==0 || result[0].trim().charAt(0)=='#'){ 
+	      continue;
+	    } else {
+	      throw new IOException("Error in configuration file (/etc/pdp.conf): " + result[0].trim() + " is unknokwn.");
+	    }
+	}
+	
+	reader.close();
+    }
+	
     /**
      * Method handling HTTP GET requests. The returned object will be sent
      * to the client as "text/plain" media type.
@@ -112,20 +151,27 @@ public class ReserveBandwidth  {
       @DefaultValue("TCP") @QueryParam("protocol") String protocol,
       @DefaultValue("") @QueryParam("bandwidth") String bandwidth)
       {      
-	String user= "gennaro";
-	String password= "1234554321";	
 	boolean error=false;	
 	String errMsg= " ";	
-	boolean serviceAvailable=false;
+	boolean serviceAvailable;
+	
 	NetconfAdapter netconf = new NetconfAdapter();	
 	String routerIP="invalid";
-	String NMIP="x.x.x.x";
 	System.err.println("Serving request...");
 
 	try 
+	
+	
 	{	
-		myRouters = getPath(serviceAvailable, NMIP, srcIp, dstIp, srcPort, dstPort, bandwidth);
-		
+		if (nm_ip.equals("")){
+		  System.err.println("NM is not available.");
+		  serviceAvailable=false;
+		} else {
+		  System.err.println("NM available.");
+		  serviceAvailable=true;
+		}
+	
+		myRouters = getPath(serviceAvailable, nm_ip, srcIp, dstIp, srcPort, dstPort, bandwidth);
 		
 		for ( int i = 0; i < myRouters.size(); i++ )
 			{
@@ -143,7 +189,6 @@ public class ReserveBandwidth  {
 				System.err.println(errMsg);
 				break;
 			}			
-
 			
 			if (proto!=-1){
 			
@@ -178,7 +223,7 @@ public class ReserveBandwidth  {
 			   
 			   configuration = configuration + "</filter></class></qdisc></shaper>";	
 
-			   netconf.ConfigureRouter(x.getMyIP(), user, password, configuration);
+			   netconf.ConfigureRouter(x.getMyIP(), pep_user, pep_password, configuration);
 			   netconf.CloseConnection();
 
 			}
@@ -217,6 +262,10 @@ public class ReserveBandwidth  {
 			error=true;
 			errMsg="Error in getting the path from NM: " + e.getMessage();
 			System.err.println(errMsg);
+	} catch (Exception e) {
+	    error=true;
+	    errMsg="Error: " + e.getMessage();
+	    System.err.println(errMsg);
 	} finally {
 	      try {
 			netconf.CloseConnection();
@@ -228,4 +277,8 @@ public class ReserveBandwidth  {
 
 	return errMsg;
       }
+      
+      private String nm_ip;
+      private String pep_user;
+      private String pep_password;
 }
