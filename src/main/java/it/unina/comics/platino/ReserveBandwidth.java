@@ -63,6 +63,9 @@ public class ReserveBandwidth  {
 	}
 	
 	private ArrayList<Router> myRouters = new ArrayList<>();	
+	private String nm_ip;
+	private String pep_user;
+	private String pep_password;
 
 	private ArrayList<Router> getPath ( boolean serviceAvailable,
 					    String ip, 
@@ -258,14 +261,17 @@ public class ReserveBandwidth  {
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
 			System.err.println(errMsg);
 		      	}
-	catch (ParseException e){
+	catch (ParseException e)
+			{
 			error=true;
 			errMsg="Error in getting the path from NM: " + e.getMessage();
 			System.err.println(errMsg);
-	} catch (Exception e) {
-	    error=true;
-	    errMsg="Error: " + e.getMessage();
-	    System.err.println(errMsg);
+			} 
+	catch (Exception e) 
+			{
+			error=true;
+			errMsg="Error: " + e.getMessage();
+			System.err.println(errMsg);
 	} finally {
 	      try {
 			netconf.CloseConnection();
@@ -278,7 +284,5 @@ public class ReserveBandwidth  {
 	return errMsg;
       }
       
-      private String nm_ip;
-      private String pep_user;
-      private String pep_password;
+
 }
