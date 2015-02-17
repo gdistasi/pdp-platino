@@ -66,7 +66,8 @@ public class ReserveBandwidth  {
 	private String nm_ip;
 	private String pep_user;
 	private String pep_password;
-
+	private String log_server;
+	
 	private ArrayList<Router> getPath ( boolean serviceAvailable,
 					    String ip, 
 					    String srcIP, 
@@ -87,8 +88,7 @@ public class ReserveBandwidth  {
 			responseMsg = "{\"timestamp\": 0,\"hops\": [ {\"hop\": 1,\"ip\":\"localhost\",\"rtt\": 2} ]}";
 		}
 	
-		System.err.println("Response from NM: ");
-		System.err.println(responseMsg);
+		String msg= "Response from NM: " + responseMsg + "\n";
 		
 		JSONParser parser=new JSONParser();
 	
@@ -97,15 +97,16 @@ public class ReserveBandwidth  {
 		JSONArray array=(JSONArray)jobj.get("hops");
 		int len=array.size();
 
-		System.err.println("Path is made of " + len + " hop(s).");
+		msg=msg +  "Path is made of " + len + " hop(s). Hops:\n";
 		
-		System.err.println("Hops: ");
 		for (int i=0; i<len;i++){
 			String routerIP=((JSONObject)array.get(i)).get("ip").toString();
-			System.err.println(routerIP);
+			msg = msg + routerIP + ", ";
 			myRouters.add( new Router(routerIP, routerIP, 10000));
 		}			
-	
+		msg = ".\n";
+		
+		log(msg);
 		
 		return myRouters;
 	}
@@ -118,6 +119,7 @@ public class ReserveBandwidth  {
 	nm_ip="";
 	pep_user="";
 	pep_password="";
+	log_server="";
 	
 	while ((line = reader.readLine()) != null){
 	    String[] result = line.split("=");
@@ -129,6 +131,8 @@ public class ReserveBandwidth  {
 	      pep_password=result[1].trim();
 	    } else if (result[0].trim().length()==0 || result[0].trim().charAt(0)=='#'){ 
 	      continue;
+	    } else if (result[0].trim().toUpperCase().equals("LOGSERVER")){
+	      log_server=result[1].trim();
 	    } else {
 	      throw new IOException("Error in configuration file (/etc/pdp.conf): " + result[0].trim() + " is unknokwn.");
 	    }
@@ -136,6 +140,24 @@ public class ReserveBandwidth  {
 	
 	reader.close();
     }
+    
+    
+    private void log(String message){
+      log(message, "INFO");
+    }
+    
+    private void log(String message, String level) {
+	System.err.println(level + ": " +message);
+	
+	try {
+	  if (!log_server.equals("")){
+	    Log.send2Orco(log_server, level, message);
+	  }
+	} catch (Exception e){
+	  System.err.println("Error in sending the logs to Logserver: " + e.getMessage());
+	}
+    }
+	
 	
     /**
      * Method handling HTTP GET requests. The returned object will be sent
@@ -160,17 +182,17 @@ public class ReserveBandwidth  {
 	
 	NetconfAdapter netconf = new NetconfAdapter();	
 	String routerIP="invalid";
-	System.err.println("Serving request...");
+	log("Serving request...");
 
 	try 
 	
 	
 	{	
 		if (nm_ip.equals("")){
-		  System.err.println("NM is not available.");
+		  log("NM is not available.", "WARNING");
 		  serviceAvailable=false;
 		} else {
-		  System.err.println("NM available.");
+		  log("NM available.");
 		  serviceAvailable=true;
 		}
 	
@@ -189,7 +211,7 @@ public class ReserveBandwidth  {
 			else {
 				errMsg="Err: Wrong protocol specification";
 				error=true;
-				System.err.println(errMsg);
+				log(errMsg, "ERROR");
 				break;
 			}			
 			
@@ -235,43 +257,43 @@ public class ReserveBandwidth  {
 			{
 			error=true;
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 			} 
 	catch (ParserConfigurationException e)
 			{
 			error=true;
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 			} 
 	catch (SAXException e)	
 			{
 			error=true;
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();			
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 			} 
 	catch (IOException e)
 			{
 			error=true;
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 		      	}
  	catch (InterruptedException e)
 			{
 			error=true;
 			errMsg= "Error in configuring router " + routerIP + " : " + e.getMessage();
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 		      	}
 	catch (ParseException e)
 			{
 			error=true;
 			errMsg="Error in getting the path from NM: " + e.getMessage();
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 			} 
 	catch (Exception e) 
 			{
 			error=true;
 			errMsg="Error: " + e.getMessage();
-			System.err.println(errMsg);
+			log(errMsg, "ERROR");
 	} finally {
 	      try {
 			netconf.CloseConnection();
