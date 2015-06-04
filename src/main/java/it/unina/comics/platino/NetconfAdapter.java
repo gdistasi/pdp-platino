@@ -20,12 +20,15 @@ public class NetconfAdapter {
 
 	public void ConfigureRouter(String routerAddress, String user, String password, String configuration) throws NetconfException, 
 				    ParserConfigurationException, SAXException, IOException, InterruptedException {
+		
 		//Create the device object and establish a NETCONF session
 		device = new Device(routerAddress, user, password, null, 22, getDefaultCapabilities());
-		device.connect();
+		device.setTimeOut(10000);
+   	        device.connect();
 		device.loadXMLConfiguration(configuration, "replace");
 		//device.close();
-		//CloseConnection();	
+		//CloseConnection();
+				       
 	}
 	
 	public static ArrayList<String> getDefaultCapabilities(){

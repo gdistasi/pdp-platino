@@ -77,19 +77,24 @@ public class ReserveBandwidth  {
 					    String Bandwidth ) throws ParseException,ConnectException {
 		String responseMsg;
 		String URI="http://" + nm_ip + "/NM/";
-	
+		log("INFO", "Srcip: "+ srcIP + "; Dstip: " + dstIP);
+					       
 	
 		if ( serviceAvailable ) {
-			Client c = ClientBuilder.newClient();			
-			WebTarget target = c.target(URI);			
-			responseMsg = target.path("?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP +"").request().get(String.class);
-		
+		        System.err.println("NM URI: " + URI + "/NM/?function=PT_Traceroute&srcip=" + dstIP +"&dstip="+ srcIP);
+		        Client c = ClientBuilder.newClient();			
+		        WebTarget target = c.target(URI).queryParam("srcip",srcIP).queryParam("function", "PT_Traceroute").queryParam("dstip", dstIP);
+		        //responseMsg = target.path("\"/NM/?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP+ "\"").request().get(String.class);
+		        responseMsg = target.request().get(String.class);
+			     
 		} else {
-			responseMsg = "{\"timestamp\": 0,\"hops\": [ {\"hop\": 1,\"ip\":\"localhost\",\"rtt\": 2} ]}";
+			responseMsg = "{\"timestamp\": 0,\"hops\": [ {\"hop\": 1,\"ip\":\"192.168.5.1\",\"rtt\": 2} ] }";
 		}
 	
 		String msg= "Response from NM: " + responseMsg + "\n";
-		
+		System.err.println("Response from NM: " + responseMsg);
+					       
+					       
 		JSONParser parser=new JSONParser();
 	
 		Object obj=parser.parse(responseMsg);
@@ -102,8 +107,12 @@ public class ReserveBandwidth  {
 		for (int i=0; i<len;i++){
 			String routerIP=((JSONObject)array.get(i)).get("ip").toString();
 			msg = msg + routerIP + ", ";
-			myRouters.add( new Router(routerIP, routerIP, 10000));
-		}			
+		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP)){			
+			   myRouters.add( new Router(routerIP, routerIP, 10000));
+			   log("INFO", "Ip " + routerIP + " considered a router.");
+			}
+		}	
+					       
 		msg = ".\n";
 		
 		log(msg);
@@ -184,10 +193,13 @@ public class ReserveBandwidth  {
 	String routerIP="invalid";
 	log("Serving request...");
 
-	try 
-	
-	
+	try 	
 	{	
+
+               //Process p = Runtime.getRuntime().exec("/root/bin/peps_init.sh"); 
+               //p.waitFor();
+
+
 		if (nm_ip.equals("")){
 		  log("NM is not available.", "WARNING");
 		  serviceAvailable=false;
@@ -229,7 +241,8 @@ public class ReserveBandwidth  {
 							"<id>11</id>"+
 							"<rate>" + bandwidth + "</rate>"+
 							"<ceil>" + x.getMybandwitdh() + "</ceil>"+
-							"<filter>"+
+							"<prio>1</prio>"+
+			                                "<filter>"+
 								"<id>16</id>"+
 								"<protocol>" + proto + "</protocol>";
 								
@@ -301,7 +314,7 @@ public class ReserveBandwidth  {
 	}
 
 	if ( error == false )
-		{errMsg = "ok";}
+		{errMsg = "{\"status\" :  \"ok\"}";}
 
 	return errMsg;
       }
