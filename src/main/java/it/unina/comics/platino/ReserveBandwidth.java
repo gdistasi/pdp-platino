@@ -109,7 +109,7 @@ public class ReserveBandwidth  {
 			msg = msg + routerIP + ", ";
 		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP) && ! routerIP.equals("*")){
 			   myRouters.add( new Router(routerIP, routerIP, 10000));
-			   log("INFO", "Ip " + routerIP + " considered a router.");
+			   log("INFO", "Router with IP " + routerIP + "  added in the path.");
 			}
 		}	
 					       
@@ -191,14 +191,13 @@ public class ReserveBandwidth  {
 	
 	NetconfAdapter netconf = new NetconfAdapter();	
 	String routerIP="invalid";
-	log("Serving request...");
+	log("Serving request. Details: srcip: " + srcIp + "; dstip: " + dstIp + "; srcPort: " + srcPort + "; dstPort: " + dstPort + "; protocol: " + protocol + "; bandwidth: " + bandwidth );
 
 	try 	
 	{	
 
                //Process p = Runtime.getRuntime().exec("/root/bin/peps_init.sh"); 
                //p.waitFor();
-
 
 		if (nm_ip.equals("")){
 		  log("NM is not available.", "WARNING");
@@ -228,7 +227,7 @@ public class ReserveBandwidth  {
 			}
 			   
 			
-		         log("Configuring router : " + myRouters.get(i).getMyIP());
+		         log("Contacting PeP running on router " + myRouters.get(i).getMyIP());
 			
 			if (proto!=-1){
 			
@@ -268,7 +267,13 @@ public class ReserveBandwidth  {
 			   netconf.CloseConnection();
 
 			}
+			   
+			log("Router correctly configured.");
+			   
 		}
+	   
+	        log("Done serving the request.");
+	   
 	} catch (NetconfException e)
 			{
 			error=true;
