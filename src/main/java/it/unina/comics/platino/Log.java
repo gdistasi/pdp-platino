@@ -35,12 +35,12 @@ import javax.ws.rs.client.*;
 public class Log {
 	 
 	 public static void send2Orco(String endPoint, String key2send,String value2send) {
-try {
+	    try {
           	Client client = ClientBuilder.newClient();
           	WebTarget target = client.target(endPoint + "/Platino/wsRest/LoggManagementService/CreateLog");
  
                 String body="{[ \"key\": \""+key2send+"\" , \"value\": \""+value2send +"\" ]}";
-System.err.println(body);
+                System.err.println(body);
           	String dateTime=new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSSS" ).format( Calendar.getInstance().getTime());
 	  	target=target.queryParam("timeEvent", dateTime);
 	  	target=target.queryParam("ors", "OR7");
@@ -51,10 +51,11 @@ System.err.println(body);
 		String response=inv.invoke(String.class);
 
 		System.err.println("Log server response: " + response);
-} catch (Exception e ){
+	    } catch (Exception e ){
 		System.err.println("Log error " + e.getMessage());
-}
+	    }
 	}
+   
 }
 
 

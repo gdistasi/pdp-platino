@@ -83,7 +83,7 @@ public class ReserveBandwidth  {
 		if ( serviceAvailable ) {
 		        System.err.println("NM URI: " + URI + "/NM/?function=PT_Traceroute&srcip=" + dstIP +"&dstip="+ srcIP);
 		        Client c = ClientBuilder.newClient();			
-		        WebTarget target = c.target(URI).queryParam("srcip",srcIP).queryParam("function", "PT_Traceroute").queryParam("dstip", dstIP);
+		        WebTarget target = c.target(URI).queryParam("dstip",srcIP).queryParam("function", "PT_Traceroute").queryParam("srcip", dstIP);
 		        //responseMsg = target.path("\"/NM/?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP+ "\"").request().get(String.class);
 		        responseMsg = target.request().get(String.class);
 			     
@@ -107,7 +107,7 @@ public class ReserveBandwidth  {
 		for (int i=0; i<len;i++){
 			String routerIP=((JSONObject)array.get(i)).get("ip").toString();
 			msg = msg + routerIP + ", ";
-		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP)){			
+		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP) && ! routerIP.equals("*")){
 			   myRouters.add( new Router(routerIP, routerIP, 10000));
 			   log("INFO", "Ip " + routerIP + " considered a router.");
 			}
@@ -225,7 +225,10 @@ public class ReserveBandwidth  {
 				error=true;
 				log(errMsg, "ERROR");
 				break;
-			}			
+			}
+			   
+			
+		         log("Configuring router : " + myRouters.get(i).getMyIP());
 			
 			if (proto!=-1){
 			
