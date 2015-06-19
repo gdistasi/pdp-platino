@@ -69,9 +69,10 @@ public class Log {
 				
 
 			} catch (MalformedURLException e) {
-				e.printStackTrace();
+				System.err.println("Error contacting the log server: " + e.getMessage());
 			} catch (IOException e) {
-				e.printStackTrace();
+//				e.printStackTrace();
+			        System.err.println("Error contacting the log server: " + e.getMessage());
 			} 
 
 	   return output;
@@ -81,9 +82,9 @@ public class Log {
    
 	 public static void send2Orco(String endPoint, String key2send,String value2send) {
 	    try {
-          	Client client = ClientBuilder.newClient();
+//          	Client client = ClientBuilder.newClient();
 	        
-          	WebTarget target = client.target(endPoint + "/Platino/wsRest/LoggManagementService/");
+  //        	WebTarget target = client.target(endPoint + "/Platino/wsRest/LoggManagementService/");
  
 	        JSONObject tag=new JSONObject();
 	        
@@ -110,7 +111,6 @@ public class Log {
   //              Invocation inv = target.request().buildPost(Entity<JSONObject>.json(createLog), "APPLICATION_JSON);
 	
 //		String response=inv.invoke();
-
 	        sendPostRequest(endPoint + "/Platino/wsRest/LoggManagementService/", createLog.toString());
 	       
 //		System.err.println("Log server response: " + response);
@@ -126,7 +126,8 @@ public class Log {
    public static void main(String[] args)
      {
 	
-	Log.send2Orco("http://192.168.100.104:8080", "info", "Prova PDP/Pep");
+	//Log.send2Orco("http://192.168.100.104:8080", "info", "Serving request. Details: srcip: 1.1.1.1; dstip: 2.2.2.2; srcPort: 11; dstPort: 12; protocol: TCP; bandwidth: 100
+//{\"CreateLog\":{\"tags\":[{\"value\":\"Serving request. Details: srcip: 1.1.1.1; dstip: 2.2.2.2; srcPort: 11; dstPort: 12; protocol: TCP; bandwidth: 100\",\"key\":\"INFO\"}],\"timeEvent\":\"2015-06-19T17:57:01.0660\",\"prototypeName\":\"PolicyDecisionPoint\",\"OR\":\"OR7\"}}");
 	
      }
    

@@ -77,11 +77,9 @@ public class ReserveBandwidth  {
 					    String Bandwidth ) throws ParseException,ConnectException {
 		String responseMsg;
 		String URI="http://" + nm_ip + "/NM/";
-		log("INFO", "Srcip: "+ srcIP + "; Dstip: " + dstIP);
-					       
-	
+			
 		if ( serviceAvailable ) {
-		        System.err.println("NM URI: " + URI + "/NM/?function=PT_Traceroute&srcip=" + dstIP +"&dstip="+ srcIP);
+		        log("Calling NM traceroute API: " + URI + "/NM/?function=PT_Traceroute&srcip=" + dstIP +"&dstip="+ srcIP);
 		        Client c = ClientBuilder.newClient();			
 		        WebTarget target = c.target(URI).queryParam("dstip",srcIP).queryParam("function", "PT_Traceroute").queryParam("srcip", dstIP);
 		        //responseMsg = target.path("\"/NM/?function=PT_Traceroute&srcip="+ dstIP +"&dstip="+ srcIP+ "\"").request().get(String.class);
@@ -91,7 +89,7 @@ public class ReserveBandwidth  {
 			responseMsg = "{\"timestamp\": 0,\"hops\": [ {\"hop\": 1,\"ip\":\"192.168.5.1\",\"rtt\": 2} ] }";
 		}
 	
-		String msg= "Response from NM: " + responseMsg + "\n";
+	        String msg= "Response from NM: " + responseMsg + "\n";
 		System.err.println("Response from NM: " + responseMsg);
 					       
 					       
@@ -160,7 +158,7 @@ public class ReserveBandwidth  {
 	
 	try {
 	  if (!log_server.equals("")){
-	    Log.send2Orco(log_server, level, message);
+	     Log.send2Orco(log_server, level, message);
 	  }
 	} catch (Exception e){
 	  System.err.println("Error in sending the logs to Logserver: " + e.getMessage());
