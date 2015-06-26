@@ -90,7 +90,7 @@ public class ReserveBandwidth  {
 		}
 	
 	        String msg= "Response from NM: " + responseMsg + "\n";
-		System.err.println("Response from NM: " + responseMsg);
+		log("Response from NM: " + responseMsg);
 					       
 					       
 		JSONParser parser=new JSONParser();
@@ -107,7 +107,7 @@ public class ReserveBandwidth  {
 			msg = msg + routerIP + ", ";
 		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP) && ! routerIP.equals("*")){
 			   myRouters.add( new Router(routerIP, routerIP, 10000));
-			   log("INFO", "Router with IP " + routerIP + "  added in the path.");
+			   log("Router with IP " + routerIP + "  added in the path.");
 			}
 		}	
 					       

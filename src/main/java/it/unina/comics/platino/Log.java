@@ -64,7 +64,7 @@ public class Log {
 				while ((currentLine = responseBuffer.readLine()) != null) {
 					output += currentLine;
 				}
-				System.out.println("Server reply (output): [" + output + "]");
+				//System.err.println("Server reply (output): [" + output + "]");
 				httpConnection.disconnect();			
 				
 
@@ -98,7 +98,7 @@ public class Log {
 
  	        String dateTime=new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSSS" ).format( Calendar.getInstance().getTime());
 	        request.put("timeEvent", dateTime);
-	        request.put("OR", "OR7");
+	        request.put("OR", "OR3");
 	        request.put("prototypeName", "PolicyDecisionPoint");
 	        
 	        request.put("tags", tags);
