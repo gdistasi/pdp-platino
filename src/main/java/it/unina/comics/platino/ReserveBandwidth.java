@@ -100,20 +100,20 @@ public class ReserveBandwidth  {
 		JSONArray array=(JSONArray)jobj.get("hops");
 		int len=array.size();
 
-		msg=msg +  "Path is made of " + len + " hop(s). Hops:\n";
+		//msg=msg +  "Path is made of " + len + " hop(s). Hops:\n";
 		
 		for (int i=0; i<len;i++){
 			String routerIP=((JSONObject)array.get(i)).get("ip").toString();
-			msg = msg + routerIP + ", ";
+			//msg = msg + routerIP + ", ";
 		        if (!routerIP.equals(srcIP) && !routerIP.equals(dstIP) && ! routerIP.equals("*")){
 			   myRouters.add( new Router(routerIP, routerIP, 10000));
 			   log("Router with IP " + routerIP + "  added in the path.");
 			}
 		}	
 					       
-		msg = ".\n";
+		//msg = ".\n";
 		
-		log(msg);
+		//log(msg);
 		
 		return myRouters;
 	}
@@ -198,10 +198,10 @@ public class ReserveBandwidth  {
                //p.waitFor();
 
 		if (nm_ip.equals("")){
-		  log("NM is not available.", "WARNING");
+		  log("NM not configured.", "WARNING");
 		  serviceAvailable=false;
 		} else {
-		  log("NM available.");
+		  //log("NM available.");
 		  serviceAvailable=true;
 		}
 	
